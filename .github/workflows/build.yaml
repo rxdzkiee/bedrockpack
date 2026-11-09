@@ -21,13 +21,10 @@ jobs:
         include:
           - goos: linux
             goarch: amd64
-
           - goos: windows
             goarch: amd64
-
           - goos: linux
             goarch: arm64
-
           - goos: darwin
             goarch: arm64
 
@@ -35,39 +32,44 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Setup Latest Stable Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: 'stable'
+          check-latest: true
+
+      - name: Repair and Update Dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "=== Go Version ==="
+          go version
+
+          echo "=== Repair Existing Dependencies ==="
+          go mod tidy
+
+          echo "=== Upgrade All Dependencies ==="
+          go get -u -t ./...
+
+          echo "=== Regenerate Module Checksums ==="
+          go mod tidy
+
+          echo "=== Download Dependencies ==="
+          go mod download all
+
+          echo "=== Verify Dependencies ==="
+          go mod verify
+
+          echo "=== Updated Module Versions ==="
+          go list -m all
+
       - name: Build and Release
         uses: wangyoucao577/go-release-action@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           goos: ${{ matrix.goos }}
           goarch: ${{ matrix.goarch }}
-
-          # DO NOT specify goversion: latest.
-          # Omitting it automatically installs the latest stable Go.
-
-          pre_command: |
-            set -e
-
-            echo "=================================="
-            echo "Updating Go dependencies"
-            echo "=================================="
-
-            # Regenerate dependency checksums.
-            rm -f go.sum
-
-            # Update all direct and indirect dependencies.
-            go get -u -t ./...
-
-            # Synchronize module dependencies.
-            go mod tidy
-
-            # Download all required modules.
-            go mod download
-
-            echo "=================================="
-            echo "Updated dependencies:"
-            go list -m all
-            echo "=================================="
 
           release_tag: nightly
           overwrite: true

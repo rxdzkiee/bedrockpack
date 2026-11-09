@@ -1,12 +1,14 @@
+
 name: Go Build Binaries
 
 on:
   push:
     branches:
-      - "**"
- 
+      - main
+  workflow_dispatch:
+
 permissions:
-  contents: write 
+  contents: write
 
 jobs:
   build:
@@ -30,16 +32,28 @@ jobs:
             goarch: arm64
 
     steps:
-      - name: Checkout
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Build Go Binary
+      - name: Build and Release
         uses: wangyoucao577/go-release-action@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
+
           goos: ${{ matrix.goos }}
           goarch: ${{ matrix.goarch }}
 
+          # Use the latest available Go toolchain.
+          goversion: latest
+
+          # Force dependency updates before compiling.
+          pre_command: |
+            rm -f go.sum
+            go get -u -t ./...
+            go mod tidy
+            go mod download
+
+          # Nightly release configuration.
           release_tag: nightly
           overwrite: true
 

@@ -39,21 +39,36 @@ jobs:
         uses: wangyoucao577/go-release-action@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-
           goos: ${{ matrix.goos }}
           goarch: ${{ matrix.goarch }}
 
-          # Use the latest available Go toolchain.
-          goversion: latest
+          # DO NOT specify goversion: latest.
+          # Omitting it automatically installs the latest stable Go.
 
-          # Force dependency updates before compiling.
           pre_command: |
+            set -e
+
+            echo "=================================="
+            echo "Updating Go dependencies"
+            echo "=================================="
+
+            # Regenerate dependency checksums.
             rm -f go.sum
+
+            # Update all direct and indirect dependencies.
             go get -u -t ./...
+
+            # Synchronize module dependencies.
             go mod tidy
+
+            # Download all required modules.
             go mod download
 
-          # Nightly release configuration.
+            echo "=================================="
+            echo "Updated dependencies:"
+            go list -m all
+            echo "=================================="
+
           release_tag: nightly
           overwrite: true
 
